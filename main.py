@@ -4,20 +4,47 @@ from collections import deque
 import matplotlib.pyplot as plt
 
 # Function to simulate a data stream
-def data_stream_simulation(size=1000, noise_level=0.1, anomaly_chance=0.01):
+def data_stream_simulation(size=1000, noise_level=0.1, anomaly_chance=0.01, delay=0.1):
+    """
+    Simulates a data stream with sinusoidal pattern, random noise, and occasional anomalies.
+
+    :param size: Number of data points to simulate
+    :param noise_level: Standard deviation of the random noise
+    :param anomaly_chance: Probability of generating an anomaly at each point
+    :param delay: Delay in seconds between generating each data point
+    :return: Generator yielding the simulated data points
+    """
+    if size <= 0:
+        raise ValueError("Size must be a positive integer")
+    if not (0 <= anomaly_chance <= 1):
+        raise ValueError("Anomaly chance must be between 0 and 1")
+
     for i in range(size):
-        # Simulate seasonality (sinusoidal pattern)
         seasonal_pattern = np.sin(i / 50) * 10
-        # Add random noise
         noise = np.random.normal(0, noise_level)
-        # Simulate anomaly with a small chance
         if np.random.rand() < anomaly_chance:
-            yield seasonal_pattern + noise + 50  # large spike as anomaly
+            yield seasonal_pattern + noise + 50  # Large spike as anomaly
         else:
             yield seasonal_pattern + noise
-        time.sleep(0.1)  # simulating real-time delay
+        if delay > 0:
+            time.sleep(delay)  # Simulate real-time delay
 
-"""def detect_anomalies(data_stream, window_size=100, threshold=3):
+
+#Function to detect anomalies
+def detect_anomalies(data_stream, window_size=50, threshold=3):
+    """
+    Detects anomalies in a data stream using Z-score method.
+
+    :param data_stream: Generator yielding data points
+    :param window_size: Number of data points to use in the sliding window
+    :param threshold: Z-score threshold to consider a point as an anomaly
+    :return: Generator yielding data points and anomaly flags (True if anomaly)
+    """
+    if window_size <= 0:
+        raise ValueError("Window size must be a positive integer")
+    if threshold <= 0:
+        raise ValueError("Threshold must be a positive number")
+
     data_window = deque(maxlen=window_size)  # Sliding window
     z_score = 0  # Initialize z_score at the beginning
     
@@ -40,47 +67,9 @@ def data_stream_simulation(size=1000, noise_level=0.1, anomaly_chance=0.01):
                 print(f"Anomaly detected: {point}")
         
         # Yield the point and the anomaly flag (True or False)
-        yield point, abs(z_score) > threshold"""
-def detect_anomalies(data_stream, window_size=100, threshold=3):
-    data_window = deque(maxlen=window_size)  # Sliding window
+        yield point, abs(z_score) > threshold
 
-    def mad(data):
-        """Calculate the Median Absolute Deviation (MAD) as a robust alternative to standard deviation."""
-        median = np.median(data)
-        return np.median(np.abs(data - median))
-    
-    # Initialize is_anomaly to False at the start
-    is_anomaly = False
-    
-    for point in data_stream:
-        data_window.append(point)
-        
-        # Only start calculating anomalies when the window is full
-        if len(data_window) == window_size:
-            mean = np.mean(data_window)
-            std = np.std(data_window)
-            mad_value = mad(data_window)
-            
-            # Choose the more robust measure (MAD or standard deviation) if std is too small
-            if std > 0:
-                z_score = (point - mean) / std
-            else:
-                z_score = 0
-            
-            # Adjust threshold dynamically based on MAD
-            dynamic_threshold = threshold + (mad_value / std) if std > 0 else threshold
-            
-            # Detect anomaly based on z_score threshold
-            is_anomaly = abs(z_score) > dynamic_threshold
-            
-            if is_anomaly:
-                print(f"Anomaly detected: {point}, z-score: {z_score}, threshold: {dynamic_threshold}")
-        
-        # Yield the point and the anomaly flag (True or False)
-        yield point, is_anomaly
-
-
-# Step 6: Visualization of Data Stream and Anomalies
+# Visualization of Data Stream and Anomalies
 
 def visualize_stream(data_stream):
     plt.ion()  # Turn on interactive mode
@@ -108,7 +97,7 @@ def visualize_stream(data_stream):
         ax.legend()
         plt.pause(0.01)
 
-# Step 7: Simulate Data and Run the Detection with Visualization
+#Simulate Data and Run the Detection with Visualization
 data_stream = data_stream_simulation(size=400)  # Simulate 200 data points
 anomalous_data_stream = detect_anomalies(data_stream)
 visualize_stream(anomalous_data_stream)
